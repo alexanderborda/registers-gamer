@@ -1,0 +1,261 @@
+# Function to read a registry value
+function Read-Registry {
+    param(
+        [string]$keyPath,
+        [string]$valueName
+    )
+    try {
+        $value = Get-ItemProperty -Path $keyPath -Name $valueName -ErrorAction Stop | Select-Object -ExpandProperty $valueName
+    } catch {
+        $value = $null
+    }
+    return $value
+}
+
+# Function to display the current value of a registry entry with a 5-second pause
+function Show-RegistryValue {
+    param(
+        [string]$keyPath,
+        [string]$valueName,
+        [string]$logFilePath
+    )
+    $currentValue = Read-Registry -keyPath $keyPath -valueName $valueName
+    if ($null -ne $currentValue) {
+        Write-Host "Current value of $valueName at $keyPath $currentValue"
+        # Log the value to a file
+        Add-Content -Path $logFilePath -Value "Current value of $valueName at $keyPath $currentValue"
+    } else {
+        Write-Host "The registry entry '$valueName' at '$keyPath' does not exist or cannot be accessed."
+        # Log the error to a file
+        Add-Content -Path $logFilePath -Value "Error: The registry entry '$valueName' at '$keyPath' does not exist or cannot be accessed."
+    }
+}
+
+# Path for the log file on the C drive
+$logFilePath = "C:\ConfigLog.txt"
+
+# Check if the script is running with admin rights
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "This script requires administrative privileges to run properly."
+    $scriptPath = $MyInvocation.MyCommand.Path
+    Start-Process powershell.exe -ArgumentList "-File `"$scriptPath`"" -Verb RunAs
+    Exit
+}
+
+# Check if the log file exists, create it if it doesn't
+if (-not (Test-Path $logFilePath)) {
+    New-Item -Path $logFilePath -ItemType File | Out-Null
+}
+
+# ===========================
+# == Disable Telemetry ==
+# ===========================
+Write-Host "`n=== Disable Telemetry ===`n"
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -valueName "AllowTelemetry" -logFilePath $logFilePath
+
+# ===========================
+# == Fast Startup ==
+# ===========================
+Write-Host "`n=== Fast Startup ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" -valueName "HiberbootEnabled" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == System Shutdown Time ==
+# ===========================
+Write-Host "`n=== System Shutdown Time ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control" -valueName "WaitToKillServiceTimeout" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Taskbar Settings ==
+# ===========================
+# Configures taskbar settings to improve responsiveness and usability
+Write-Host "`n=== Taskbar Settings ===`n"
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -valueName "ExtendedUIHoverTime" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -valueName "TaskbarAnimations" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -valueName "ListviewAlphaSelect" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Network Settings ==
+# ===========================
+# Adjusts network settings for optimal performance
+Write-Host "`n=== Network Settings ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\ControlSet001\Services\LanmanWorkstation\Parameters" -valueName "MaxCollectionCount" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\ControlSet001\Services\LanmanWorkstation\Parameters" -valueName "MaxThreads" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\ControlSet001\Services\LanmanWorkstation\Parameters" -valueName "MaxCmds" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == System Performance ==
+# ===========================
+# Configures system settings to improve performance
+Write-Host "`n=== System Performance ===`n"
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" -valueName "SearchOrderConfig" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" -valueName "HiberBootEnabled" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == System Policies ==
+# ===========================
+# Configures system policies for better user experience and faster logon
+Write-Host "`n=== System Policies ===`n"
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -valueName "EnableFirstLogonAnimation" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -valueName "SynchronousUserGroupPolicy" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -valueName "VerboseStatus" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -valueName "SynchronousMachineGroupPolicy" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Disable services ==
+# ===========================
+# Disables various system services for performance improvement
+Write-Host "`n=== Disable Services ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\BITS" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\BTAGService" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\bthserv" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack" -valueName "Start" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Multimedia Settings ==
+# ===========================
+# Adjusts multimedia settings for better performance in games and multimedia applications
+Write-Host "`n=== Multimedia Settings ===`n"
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -valueName "NetworkThrottlingIndex" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -valueName "SystemResponsiveness" -logFilePath $logFilePath
+
+Write-Host "`n=== Games Scheduling ===`n"
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "Affinity" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "Background Only" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "Clock Rate" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "GPU Priority" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "Priority" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "Scheduling Category" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -valueName "SFIO Priority" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Explorer Settings ==
+# ===========================
+# Optimizes Windows Explorer settings for better performance and usability
+Write-Host "`n=== Explorer Settings ===`n"
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "HungAppTimeout" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "MenuShowDelay" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "WaitToKillAppTimeout" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -valueName "Max Cached Icons" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -valueName "NoInternetOpenWith" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -valueName "NoResolveTrack" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Other Settings ==
+# ===========================
+# Miscellaneous system settings for better overall performance
+Write-Host "`n=== Other Settings ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -valueName "PowerThrottlingOff" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -valueName "ShowSleepOption" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Power" -valueName "HibernateEnabled" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance" -valueName "MaintenanceDisabled" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "MenuShowDelay" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -valueName "" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -valueName "GlobalUserDisabled" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -valueName "AllowNewsAndInterests" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Process Response Time ==
+# ===========================
+Write-Host "`n=== Process Response Time ===`n"
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "AutoEndTasks" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "HungAppTimeout" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "WaitToKillAppTimeout" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "LowLevelHooksTimeout" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Control Panel\Desktop" -valueName "MenuShowDelay" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Disable Xbox Software ==
+# ===========================
+Write-Host "`n=== Disable Xbox Software ===`n"
+Show-RegistryValue -keyPath "HKCU:\System\GameConfigStore" -valueName "GameDVR_Enabled" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\System\GameConfigStore" -valueName "GameDVR_FSEBehaviorMode" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\System\GameConfigStore" -valueName "GameDVR_HonorUserFSEBehaviorMode" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\System\GameConfigStore" -valueName "GameDVR_DXGIHonorFSEWindowsCompatible" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\System\GameConfigStore" -valueName "GameDVR_EFSEFeatureFlags" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Additional Registry Keys ==
+# ===========================
+Write-Host "`n=== Additional Registry Keys ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" -valueName "HiberbootEnabled" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\GpuEnergyDrv" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\ControlSet001\Control\PriorityControl" -valueName "Win32PrioritySeparation" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\DisplayPostProcessing" -valueName "Affinity" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -valueName "IRQ8Priority" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" -valueName "AdditionalCriticalWorkerThreads" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -valueName "SecondLevelDataCache" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -valueName "EnablePrefetcher" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -valueName "DisableDeleteNotification" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\MSMQ\Parameters" -valueName "TCPNoDelay" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -valueName "EnableFirstLogonAnimation" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize" -valueName "StartupDelayInMSec" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -valueName "Max Cached Icons" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -valueName "ExtendedUIHoverTime" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\ControlSet001\Services\LanmanWorkstation\Parameters" -valueName "MaxCollectionCount" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" -valueName "Auto" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\ControlSet001\Control\Session Manager" -valueName "AutoChkTimeOut" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -valueName "AutoRestartShell" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# ===========================
+# == Disable Hyper-V ==
+# ===========================
+Write-Host "`n=== Disable Hyper-V ===`n"
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\HvHost" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmickvpexchange" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmicguestinterface" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmicshutdown" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmicheartbeat" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmicvmsession" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmicrdv" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmictimesync" -valueName "Start" -logFilePath $logFilePath
+Show-RegistryValue -keyPath "HKLM:\SYSTEM\CurrentControlSet\Services\vmicvss" -valueName "Start" -logFilePath $logFilePath
+
+# Pausing for 5 seconds
+Start-Sleep -Seconds 5
+
+# Display completion message
+Write-Host "`nConfiguration check completed."
+
+# Final message and log file path
+Write-Host "`nLog file created or updated at: $logFilePath"
